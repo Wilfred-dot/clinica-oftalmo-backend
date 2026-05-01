@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model consultas {
+  id          Int           @id @default(autoincrement())
+  paciente_id Int
+  medico_id   Int
+  data_hora   DateTime      @db.Timestamp(6)
+  status      String?       @default("agendada") @db.VarChar(20)
+  observacoes String?
+  medicos     medicos       @relation(fields: [medico_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pacientes   pacientes     @relation(fields: [paciente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prescricoes prescricoes[]
+
+  @@unique([medico_id, data_hora])
+  @@index([medico_id, data_hora], map: "idx_consultas_medico_data")
+  @@index([paciente_id], map: "idx_consultas_paciente")
+  @@index([status], map: "idx_consultas_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model medicos {
+  id               Int         @id @default(autoincrement())
+  user_id          Int         @unique
+  especialidade    String      @db.VarChar(100)
+  numero_ordem     String      @unique @db.VarChar(50)
+  telefone         String?     @db.VarChar(20)
+  horario_trabalho String?     @db.VarChar(20)
+  consultas        consultas[]
+  users            users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model notificacoes {
+  id            Int       @id @default(autoincrement())
+  paciente_id   Int
+  mensagem      String
+  tipo_variavel String?   @default("lembrete_consulta") @db.VarChar(50)
+  data_envio    DateTime? @default(now()) @db.Timestamp(6)
+  status_envio  String?   @default("pendente") @db.VarChar(20)
+  pacientes     pacientes @relation(fields: [paciente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([paciente_id], map: "idx_notificacoes_paciente")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pacientes {
+  id                  Int                   @id @default(autoincrement())
+  user_id             Int?                  @unique
+  data_nascimento     DateTime              @db.Date
+  sexo                String?               @db.Char(1)
+  telefone            String?               @db.VarChar(20)
+  endereco            String
+  historico_medico    String?
+  consultas           consultas[]
+  notificacoes        notificacoes[]
+  users               users?                @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  processo_internacao processo_internacao[]
+}
+
+model prescricoes {
+  id              Int       @id @default(autoincrement())
+  consulta_id     Int
+  medicamento     String    @db.VarChar(100)
+  dosagem         String    @db.VarChar(100)
+  instrucoes      String?
+  data_prescricao DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
+  consultas       consultas @relation(fields: [consulta_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model processo_internacao {
+  nr_processo       String    @id @db.VarChar(20)
+  paciente_id       Int
+  data_entrada      DateTime  @db.Date
+  data_reintegracao DateTime? @db.Date
+  causa             String
+  pacientes         pacientes @relation(fields: [paciente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id         Int        @id @default(autoincrement())
+  name       String     @db.VarChar(100)
+  email      String     @unique @db.VarChar(100)
+  password   String     @db.VarChar(255)
+  role       String     @db.VarChar(20)
+  created_at DateTime?  @default(now()) @db.Timestamp(6)
+  medicos    medicos?
+  pacientes  pacientes?
+}
