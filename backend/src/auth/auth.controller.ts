@@ -1,4 +1,5 @@
-﻿import { Controller, Post, Body, HttpCode } from '@nestjs/common';
+﻿import { Controller, Post, Body, HttpCode, Get, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -22,5 +23,12 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  // ─── nova rota ──────────────────────────────────
+  @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  getProfile(@Request() req) {
+    return this.authService.getProfile(req.user.userId);
   }
 }

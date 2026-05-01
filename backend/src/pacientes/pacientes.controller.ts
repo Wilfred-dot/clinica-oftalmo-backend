@@ -13,8 +13,8 @@ export class PacientesController {
 
   @Post()
   @Roles('admin', 'recepcionista')
-  create(@Body() createPacienteDto: CreatePacienteDto) {
-    return this.pacientesService.create(createPacienteDto);
+  create(@Body() dto: CreatePacienteDto) {
+    return this.pacientesService.create(dto);
   }
 
   @Get()
@@ -23,11 +23,17 @@ export class PacientesController {
     return this.pacientesService.findAll();
   }
 
+  // ─── nova rota ──────────────────────────────────
+  @Get('me')
+  @Roles('admin', 'recepcionista', 'medico', 'paciente')
+  findMe(@Request() req) {
+    return this.pacientesService.findByUserId(req.user.userId);
+  }
+
   @Get(':id')
   @Roles('admin', 'recepcionista', 'medico', 'paciente')
   async findOne(@Param('id') id: string, @Request() req) {
     const paciente = await this.pacientesService.findOne(+id);
-    // Se for paciente, só pode ver o seu próprio perfil
     if (req.user.role === 'paciente' && paciente.user_id !== req.user.userId) {
       throw new ForbiddenException('Acesso negado');
     }
@@ -36,8 +42,8 @@ export class PacientesController {
 
   @Patch(':id')
   @Roles('admin', 'recepcionista')
-  update(@Param('id') id: string, @Body() updatePacienteDto: UpdatePacienteDto) {
-    return this.pacientesService.update(+id, updatePacienteDto);
+  update(@Param('id') id: string, @Body() dto: UpdatePacienteDto) {
+    return this.pacientesService.update(+id, dto);
   }
 
   @Delete(':id')

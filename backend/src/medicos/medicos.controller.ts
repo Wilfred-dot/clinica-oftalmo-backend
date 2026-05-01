@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -21,6 +21,13 @@ export class MedicosController {
   @Roles('admin', 'recepcionista', 'medico')
   findAll() {
     return this.medicosService.findAll();
+  }
+
+  // ─── nova rota ──────────────────────────────────
+  @Get('me')
+  @Roles('admin', 'recepcionista', 'medico', 'paciente')
+  findMe(@Request() req) {
+    return this.medicosService.findByUserId(req.user.userId);
   }
 
   @Get(':id')
