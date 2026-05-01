@@ -7,9 +7,16 @@ import { UpdateConsultaDto } from './dto/update-consulta.dto';
 export class ConsultasService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateConsultaDto) {
+  async create(dto: CreateConsultaDto, currentUserId: number, currentRole: string) {
     const dataHora = new Date(dto.data_hora);
     if (dataHora <= new Date()) throw new BadRequestException('A data da consulta deve ser futura');
+
+    // Se for paciente, ignora o paciente_id do corpo e obtém o paciente correto
+    if (currentRole === 'paciente') {
+      const paciente = await this.prisma.pacientes.findUnique({ where: { user_id: currentUserId } });
+      if (!paciente) throw new NotFoundException('Paciente não encontrado');
+      dto.paciente_id = paciente.id;
+    }
 
     const paciente = await this.prisma.pacientes.findUnique({ where: { id: dto.paciente_id } });
     if (!paciente) throw new NotFoundException('Paciente não encontrado');
@@ -84,16 +91,14 @@ export class ConsultasService {
   }
 
   async update(id: number, dto: UpdateConsultaDto, currentUserId: number, currentRole: string) {
-    // Carrega a consulta com os dados do médico
     const consulta = await this.prisma.consultas.findUnique({
       where: { id },
-      include: { medicos: true },   // para aceder ao user_id do médico
+      include: { medicos: true },
     });
     if (!consulta) throw new NotFoundException('Consulta não encontrada');
 
     if (dto.status) {
       if (dto.status === 'realizada') {
-        // Verifica se o user logado é o médico responsável (compara user_id)
         if (currentRole !== 'medico' || consulta.medicos.user_id !== currentUserId) {
           throw new ForbiddenException('Apenas o médico responsável pode realizar a consulta');
         }

@@ -13,8 +13,8 @@ export class ConsultasController {
 
   @Post()
   @Roles('admin', 'recepcionista', 'paciente')
-  create(@Body() dto: CreateConsultaDto) {
-    return this.consultasService.create(dto);
+  create(@Body() dto: CreateConsultaDto, @Request() req) {
+    return this.consultasService.create(dto, req.user.userId, req.user.role);
   }
 
   @Get()
