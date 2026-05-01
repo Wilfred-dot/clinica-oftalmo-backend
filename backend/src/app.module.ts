@@ -11,6 +11,8 @@ import { ConsultasModule } from './consultas/consultas.module';
 import { PrescricoesModule } from './prescricoes/prescricoes.module';
 import { NotificacoesModule } from './notificacoes/notificacoes.module';
 import { InternacoesModule } from './internacoes/internacoes.module';
+import { TasksModule } from './tasks/tasks.module';
+import { RelatoriosModule } from './relatorios/relatorios.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { InternacoesModule } from './internacoes/internacoes.module';
     PrescricoesModule,
     NotificacoesModule,
     InternacoesModule,
+    TasksModule,
+    RelatoriosModule,
   ],
   controllers: [AppController],
   providers: [AppService],
