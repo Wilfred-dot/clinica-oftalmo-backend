@@ -3,19 +3,19 @@ dotenv.config();
 
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Habilitar CORS
-  app.enableCors();
+  // ===== SEGURANÇA =====
+  app.use(helmet());                     // Headers de segurança automáticos
+  app.enableCors();                      // Permitir requisições de outras origens
+  app.useGlobalFilters(new AllExceptionsFilter()); // Padronização de erros
 
-  // Filtro global de exceções
-  app.useGlobalFilters(new AllExceptionsFilter());
-
-  // Swagger
+  // ===== SWAGGER =====
   const config = new DocumentBuilder()
     .setTitle('Sistema de Gestão de Saúde Oftalmológica')
     .setDescription('API REST da Clínica MMQ – Beira, Moçambique')
