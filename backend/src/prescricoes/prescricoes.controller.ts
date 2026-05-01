@@ -1,0 +1,43 @@
+﻿import { Controller, Get, Post, Body, Param, Patch, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { PrescricoesService } from './prescricoes.service';
+import { CreatePrescricaoDto } from './dto/create-prescricao.dto';
+import { UpdatePrescricaoDto } from './dto/update-prescricao.dto';
+
+@Controller('prescricoes')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+export class PrescricoesController {
+  constructor(private readonly prescricoesService: PrescricoesService) {}
+
+  @Post()
+  @Roles('admin', 'medico')
+  create(@Body() dto: CreatePrescricaoDto, @Request() req) {
+    return this.prescricoesService.create(dto, req.user.userId, req.user.role);
+  }
+
+  @Get()
+  @Roles('admin', 'medico', 'recepcionista', 'paciente')
+  findAll(@Query() filtros: any) {
+    return this.prescricoesService.findAll(filtros);
+  }
+
+  @Get(':id')
+  @Roles('admin', 'medico', 'recepcionista', 'paciente')
+  findOne(@Param('id') id: string) {
+    return this.prescricoesService.findOne(+id);
+  }
+
+  @Patch(':id')
+  @Roles('admin', 'medico')
+  update(@Param('id') id: string, @Body() dto: UpdatePrescricaoDto, @Request() req) {
+    return this.prescricoesService.update(+id, dto, req.user.userId, req.user.role);
+  }
+
+  @Delete(':id')
+  @Roles('admin', 'medico')
+  remove(@Param('id') id: string, @Request() req) {
+    return this.prescricoesService.remove(+id, req.user.userId, req.user.role);
+  }
+}
