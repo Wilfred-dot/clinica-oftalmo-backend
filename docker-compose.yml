@@ -9,6 +9,9 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   app:
     build:
@@ -22,11 +25,41 @@ services:
       - "3000:3000"
     depends_on:
       - db
-    stdin_open: true
-    tty: true
     env_file:
       - ./backend/.env
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: clinica-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3001:3000"
+    depends_on:
+      - app
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      API_URL: http://app:3000
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          ignore:
+            - node_modules/
+            - .next/
+        - action: rebuild
+          path: ./frontend/package.json
 
 volumes:
   pgdata:
