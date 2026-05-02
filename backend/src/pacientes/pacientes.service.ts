@@ -28,21 +28,39 @@ export class PacientesService {
     });
   }
 
-  async findAll(search?: string) {
+  async findAll(page = 1, limit = 10, search?: string) {
     const where: any = {};
-    if (search) where.users = { name: { contains: search, mode: 'insensitive' } };
-    const pacientes = await this.prisma.pacientes.findMany({
-      where,
-      include: {
-        users: { select: { id: true, name: true, email: true, ativo: true } },
-        consultas: { orderBy: { data_hora: 'desc' }, take: 1 },
-      },
-    });
-    return pacientes.map(p => ({
+    if (search) {
+      where.users = { name: { contains: search, mode: 'insensitive' } };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.pacientes.findMany({
+        where,
+        include: {
+          users: { select: { id: true, name: true, email: true, ativo: true } },
+          consultas: { orderBy: { data_hora: 'desc' }, take: 1 },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { id: 'asc' },
+      }),
+      this.prisma.pacientes.count({ where }),
+    ]);
+
+    const pacientes = data.map(p => ({
       ...p,
       ultimo_atendimento: p.consultas.length > 0 ? p.consultas[0].data_hora : null,
       consultas: undefined,
     }));
+
+    return {
+      data: pacientes,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number) {
@@ -87,7 +105,6 @@ export class PacientesService {
     return { message: 'Paciente removido' };
   }
 
-  // ─── NOVO: histórico do paciente ──────────────
   async getHistorico(id: number) {
     const paciente = await this.prisma.pacientes.findUnique({
       where: { id },
@@ -104,7 +121,6 @@ export class PacientesService {
     });
     if (!paciente) throw new NotFoundException('Paciente não encontrado');
 
-    // Mapear consultas para incluir diagnóstico extraído do JSON
     const consultasFormatadas = paciente.consultas.map(c => {
       let diagnostico = null;
       try {

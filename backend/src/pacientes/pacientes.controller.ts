@@ -19,8 +19,16 @@ export class PacientesController {
 
   @Get()
   @Roles('admin', 'recepcionista', 'medico')
-  findAll(@Query('search') search?: string) {
-    return this.pacientesService.findAll(search);
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.pacientesService.findAll(
+      page ? +page : 1,
+      limit ? +limit : 10,
+      search,
+    );
   }
 
   @Get('me')
@@ -29,14 +37,9 @@ export class PacientesController {
     return this.pacientesService.findByUserId(req.user.userId);
   }
 
-  // ─── NOVA ROTA ──────────────────────────────
   @Get(':id/historico')
   @Roles('admin', 'recepcionista', 'medico', 'paciente')
   getHistorico(@Param('id') id: string, @Request() req) {
-    // Se for paciente, só pode ver o seu próprio histórico
-    if (req.user.role === 'paciente') {
-      // O serviço irá validar se o paciente_id corresponde ao user_id
-    }
     return this.pacientesService.getHistorico(+id);
   }
 

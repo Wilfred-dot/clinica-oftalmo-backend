@@ -18,9 +18,19 @@ export class UsersController {
   }
 
   @Get()
-  findAll(@Query('search') search?: string, @Query('ativo') ativo?: string) {
-    const ativoBool = ativo ? ativo === 'true' : undefined;
-    return this.usersService.findAll(search, ativoBool);
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('ativo') ativo?: string,
+  ) {
+    const ativoBool = ativo !== undefined ? ativo === 'true' : undefined;
+    return this.usersService.findAll(
+      page ? +page : 1,
+      limit ? +limit : 10,
+      search,
+      ativoBool,
+    );
   }
 
   @Get(':id')

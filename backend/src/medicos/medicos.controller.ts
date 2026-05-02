@@ -19,8 +19,16 @@ export class MedicosController {
 
   @Get()
   @Roles('admin', 'recepcionista', 'medico')
-  findAll(@Query('search') search?: string) {
-    return this.medicosService.findAll(search);
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.medicosService.findAll(
+      page ? +page : 1,
+      limit ? +limit : 10,
+      search,
+    );
   }
 
   @Get('me')

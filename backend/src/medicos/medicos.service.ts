@@ -29,23 +29,44 @@ export class MedicosService {
     });
   }
 
-  async findAll(search?: string) {
+  async findAll(page = 1, limit = 10, search?: string) {
     const where: any = {};
     if (search) {
       where.users = { name: { contains: search, mode: 'insensitive' } };
     }
-    const medicos = await this.prisma.medicos.findMany({
-      where,
-      include: {
-        users: { select: { id: true, name: true, email: true, role: true, ativo: true } },
-        consultas: { where: { data_hora: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } },
-      },
-    });
-    return medicos.map(m => ({
-      ...m,
+
+    const [data, total] = await Promise.all([
+      this.prisma.medicos.findMany({
+        where,
+        include: {
+          users: { select: { id: true, name: true, email: true, role: true, ativo: true } },
+          consultas: { where: { data_hora: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { id: 'asc' },
+      }),
+      this.prisma.medicos.count({ where }),
+    ]);
+
+    const medicos = data.map(m => ({
+      id: m.id,
+      user_id: m.user_id,
+      especialidade: m.especialidade,
+      numero_ordem: m.numero_ordem,
+      telefone: m.telefone,
+      horario_trabalho: m.horario_trabalho,
+      users: m.users,
       consultas_mes: m.consultas.length,
-      consultas: undefined, // não precisa enviar a lista
     }));
+
+    return {
+      data: medicos,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number) {

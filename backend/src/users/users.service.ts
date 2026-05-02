@@ -11,19 +11,14 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const existing = await this.prisma.users.findUnique({ where: { email: createUserDto.email } });
     if (existing) throw new ConflictException('Email já existe');
-
     const hash = await bcrypt.hash(createUserDto.password, 10);
     return this.prisma.users.create({
-      data: {
-        ...createUserDto,
-        password: hash,
-        ativo: createUserDto.ativo ?? true,
-      },
+      data: { ...createUserDto, password: hash, ativo: createUserDto.ativo ?? true },
       select: { id: true, name: true, email: true, role: true, ativo: true, created_at: true },
     });
   }
 
-  async findAll(search?: string, ativo?: boolean) {
+  async findAll(page = 1, limit = 10, search?: string, ativo?: boolean) {
     const where: any = {};
     if (search) {
       where.OR = [
@@ -32,10 +27,25 @@ export class UsersService {
       ];
     }
     if (ativo !== undefined) where.ativo = ativo;
-    return this.prisma.users.findMany({
-      where,
-      select: { id: true, name: true, email: true, role: true, ativo: true, created_at: true },
-    });
+
+    const [data, total] = await Promise.all([
+      this.prisma.users.findMany({
+        where,
+        select: { id: true, name: true, email: true, role: true, ativo: true, created_at: true },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.users.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number) {
@@ -48,9 +58,7 @@ export class UsersService {
   async update(id: number, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
     const data: any = { ...updateUserDto };
-    if (data.password) {
-      data.password = await bcrypt.hash(data.password, 10);
-    }
+    if (data.password) data.password = await bcrypt.hash(data.password, 10);
     return this.prisma.users.update({
       where: { id },
       data,
