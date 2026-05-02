@@ -23,12 +23,17 @@ export class ConsultasController {
     return this.consultasService.findAll(filtros);
   }
 
+  // ─── NOVA ROTA ──────────────────────────────
+  @Get('semana')
+  @Roles('admin', 'recepcionista', 'medico')
+  getSemana(@Query('data') data: string) {
+    return this.consultasService.getSemana(data || new Date().toISOString().slice(0,10));
+  }
+
   @Get(':id')
   @Roles('admin', 'recepcionista', 'medico', 'paciente')
   async findOne(@Param('id') id: string, @Request() req) {
     const consulta = await this.consultasService.findOne(+id);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
     if (req.user.role === 'paciente' && consulta.pacientes.user_id !== req.user.userId) {
       throw new ForbiddenException('Apenas pode visualizar as suas próprias consultas');
     }

@@ -24,4 +24,10 @@ export class RelatoriosController {
   resumoGeral() {
     return this.relatoriosService.resumoGeral();
   }
+
+  // ─── NOVA ROTA ──────────────────────────────
+  @Get('consultas-por-dia')
+  consultasPorDia(@Query('mes') mes: string) {
+    return this.relatoriosService.consultasPorDia(mes || new Date().toISOString().slice(0,7));
+  }
 }

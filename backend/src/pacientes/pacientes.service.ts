@@ -30,9 +30,7 @@ export class PacientesService {
 
   async findAll(search?: string) {
     const where: any = {};
-    if (search) {
-      where.users = { name: { contains: search, mode: 'insensitive' } };
-    }
+    if (search) where.users = { name: { contains: search, mode: 'insensitive' } };
     const pacientes = await this.prisma.pacientes.findMany({
       where,
       include: {
@@ -41,15 +39,9 @@ export class PacientesService {
       },
     });
     return pacientes.map(p => ({
-      id: p.id,
-      user_id: p.user_id,
-      data_nascimento: p.data_nascimento,
-      sexo: p.sexo,
-      telefone: p.telefone,
-      endereco: p.endereco,
-      historico_medico: p.historico_medico,
-      users: p.users,
+      ...p,
       ultimo_atendimento: p.consultas.length > 0 ? p.consultas[0].data_hora : null,
+      consultas: undefined,
     }));
   }
 
@@ -93,5 +85,62 @@ export class PacientesService {
     await this.findOne(id);
     await this.prisma.pacientes.delete({ where: { id } });
     return { message: 'Paciente removido' };
+  }
+
+  // ─── NOVO: histórico do paciente ──────────────
+  async getHistorico(id: number) {
+    const paciente = await this.prisma.pacientes.findUnique({
+      where: { id },
+      include: {
+        users: { select: { id: true, name: true, email: true, ativo: true } },
+        consultas: {
+          orderBy: { data_hora: 'desc' },
+          include: {
+            medicos: { include: { users: { select: { name: true } } } },
+            prescricoes: true,
+          },
+        },
+      },
+    });
+    if (!paciente) throw new NotFoundException('Paciente não encontrado');
+
+    // Mapear consultas para incluir diagnóstico extraído do JSON
+    const consultasFormatadas = paciente.consultas.map(c => {
+      let diagnostico = null;
+      try {
+        if (c.observacoes) {
+          const clinico = JSON.parse(c.observacoes);
+          diagnostico = clinico.diagnostico || null;
+        }
+      } catch {}
+      return {
+        id: c.id,
+        data: c.data_hora,
+        medico: c.medicos?.users?.name,
+        status: c.status,
+        diagnostico,
+        prescricoes: c.prescricoes.map(p => ({
+          medicamento: p.medicamento,
+          dosagem: p.dosagem,
+          data: p.data_prescricao,
+        })),
+      };
+    });
+
+    return {
+      paciente: {
+        id: paciente.id,
+        nome: paciente.users?.name,
+        email: paciente.users?.email,
+        data_nascimento: paciente.data_nascimento,
+        sexo: paciente.sexo,
+        telefone: paciente.telefone,
+        endereco: paciente.endereco,
+        historico_medico: paciente.historico_medico,
+        ativo: paciente.users?.ativo,
+      },
+      total_consultas: consultasFormatadas.length,
+      consultas: consultasFormatadas,
+    };
   }
 }
