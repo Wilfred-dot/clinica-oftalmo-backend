@@ -1,16 +1,19 @@
-﻿import { IsString, IsOptional, IsIn } from 'class-validator';
+﻿import { IsString, IsOptional, IsIn, IsBoolean } from 'class-validator';
 
 export class UpdateUserDto {
-  @IsString()
   @IsOptional()
+  @IsString()
   name?: string;
 
-  @IsString()
   @IsOptional()
-  @IsIn(['admin', 'medico', 'recepcionista', 'paciente'])
+  @IsString()
   role?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   password?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  ativo?: boolean;
 }

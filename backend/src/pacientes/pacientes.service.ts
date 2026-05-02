@@ -8,74 +8,84 @@ import * as bcrypt from 'bcrypt';
 export class PacientesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createPacienteDto: CreatePacienteDto) {
-    const existing = await this.prisma.users.findUnique({ where: { email: createPacienteDto.email } });
-    if (existing) throw new ConflictException('Email já existe');
-    const hash = await bcrypt.hash(createPacienteDto.password, 10);
+  async create(dto: CreatePacienteDto) {
+    const existUser = await this.prisma.users.findUnique({ where: { email: dto.email } });
+    if (existUser) throw new ConflictException('Email já existe');
+    const hash = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.users.create({
-      data: {
-        name: createPacienteDto.name,
-        email: createPacienteDto.email,
-        password: hash,
-        role: 'paciente',
-      },
+      data: { name: dto.name, email: dto.email, password: hash, role: 'paciente' },
     });
     return this.prisma.pacientes.create({
       data: {
         user_id: user.id,
-        data_nascimento: new Date(createPacienteDto.data_nascimento),
-        sexo: createPacienteDto.sexo,
-        telefone: createPacienteDto.telefone,
-        endereco: createPacienteDto.endereco,
-        historico_medico: createPacienteDto.historico_medico,
+        data_nascimento: new Date(dto.data_nascimento),
+        sexo: dto.sexo,
+        telefone: dto.telefone,
+        endereco: dto.endereco,
+        historico_medico: dto.historico_medico,
       },
-      include: { users: { select: { id: true, name: true, email: true } } },
+      include: { users: { select: { id: true, name: true, email: true, ativo: true } } },
     });
   }
 
-  async findAll() {
-    return this.prisma.pacientes.findMany({
-      include: { users: { select: { id: true, name: true, email: true } } },
+  async findAll(search?: string) {
+    const where: any = {};
+    if (search) {
+      where.users = { name: { contains: search, mode: 'insensitive' } };
+    }
+    const pacientes = await this.prisma.pacientes.findMany({
+      where,
+      include: {
+        users: { select: { id: true, name: true, email: true, ativo: true } },
+        consultas: { orderBy: { data_hora: 'desc' }, take: 1 },
+      },
     });
+    return pacientes.map(p => ({
+      id: p.id,
+      user_id: p.user_id,
+      data_nascimento: p.data_nascimento,
+      sexo: p.sexo,
+      telefone: p.telefone,
+      endereco: p.endereco,
+      historico_medico: p.historico_medico,
+      users: p.users,
+      ultimo_atendimento: p.consultas.length > 0 ? p.consultas[0].data_hora : null,
+    }));
   }
 
   async findOne(id: number) {
     const paciente = await this.prisma.pacientes.findUnique({
       where: { id },
-      include: { users: { select: { id: true, name: true, email: true } } },
+      include: { users: { select: { id: true, name: true, email: true, ativo: true } } },
     });
     if (!paciente) throw new NotFoundException('Paciente não encontrado');
     return paciente;
   }
 
-  // ─── novo método ──────────────────────────────────
   async findByUserId(userId: number) {
     const paciente = await this.prisma.pacientes.findUnique({
       where: { user_id: userId },
-      include: { users: { select: { id: true, name: true, email: true } } },
+      include: { users: { select: { id: true, name: true, email: true, ativo: true } } },
     });
-    if (!paciente) throw new NotFoundException('Paciente não encontrado para este utilizador');
+    if (!paciente) throw new NotFoundException('Paciente não encontrado');
     return paciente;
   }
 
-  async update(id: number, updatePacienteDto: UpdatePacienteDto) {
+  async update(id: number, dto: UpdatePacienteDto) {
     const paciente = await this.findOne(id);
-    if (updatePacienteDto.email && paciente.users) {
-      await this.prisma.users.update({
-        where: { id: paciente.user_id },
-        data: { email: updatePacienteDto.email },
-      });
+    if (dto.email && paciente.users) {
+      await this.prisma.users.update({ where: { id: paciente.user_id }, data: { email: dto.email } });
     }
     return this.prisma.pacientes.update({
       where: { id },
       data: {
-        data_nascimento: updatePacienteDto.data_nascimento ? new Date(updatePacienteDto.data_nascimento) : undefined,
-        sexo: updatePacienteDto.sexo,
-        telefone: updatePacienteDto.telefone,
-        endereco: updatePacienteDto.endereco,
-        historico_medico: updatePacienteDto.historico_medico,
+        data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : undefined,
+        sexo: dto.sexo,
+        telefone: dto.telefone,
+        endereco: dto.endereco,
+        historico_medico: dto.historico_medico,
       },
-      include: { users: { select: { id: true, name: true, email: true } } },
+      include: { users: { select: { id: true, name: true, email: true, ativo: true } } },
     });
   }
 

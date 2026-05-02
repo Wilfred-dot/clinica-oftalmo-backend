@@ -25,32 +25,44 @@ export class MedicosService {
         telefone: dto.telefone,
         horario_trabalho: dto.horario_trabalho,
       },
-      include: { users: { select: { id: true, name: true, email: true, role: true } } },
+      include: { users: { select: { id: true, name: true, email: true, role: true, ativo: true } } },
     });
   }
 
-  async findAll() {
-    return this.prisma.medicos.findMany({
-      include: { users: { select: { id: true, name: true, email: true, role: true } } },
+  async findAll(search?: string) {
+    const where: any = {};
+    if (search) {
+      where.users = { name: { contains: search, mode: 'insensitive' } };
+    }
+    const medicos = await this.prisma.medicos.findMany({
+      where,
+      include: {
+        users: { select: { id: true, name: true, email: true, role: true, ativo: true } },
+        consultas: { where: { data_hora: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } },
+      },
     });
+    return medicos.map(m => ({
+      ...m,
+      consultas_mes: m.consultas.length,
+      consultas: undefined, // não precisa enviar a lista
+    }));
   }
 
   async findOne(id: number) {
     const medico = await this.prisma.medicos.findUnique({
       where: { id },
-      include: { users: { select: { id: true, name: true, email: true, role: true } } },
+      include: { users: { select: { id: true, name: true, email: true, role: true, ativo: true } } },
     });
     if (!medico) throw new NotFoundException('Médico não encontrado');
     return medico;
   }
 
-  // ─── novo método ──────────────────────────────────
   async findByUserId(userId: number) {
     const medico = await this.prisma.medicos.findUnique({
       where: { user_id: userId },
-      include: { users: { select: { id: true, name: true, email: true, role: true } } },
+      include: { users: { select: { id: true, name: true, email: true, role: true, ativo: true } } },
     });
-    if (!medico) throw new NotFoundException('Médico não encontrado para este utilizador');
+    if (!medico) throw new NotFoundException('Médico não encontrado');
     return medico;
   }
 
@@ -59,7 +71,7 @@ export class MedicosService {
     return this.prisma.medicos.update({
       where: { id },
       data: dto,
-      include: { users: { select: { id: true, name: true, email: true, role: true } } },
+      include: { users: { select: { id: true, name: true, email: true, role: true, ativo: true } } },
     });
   }
 

@@ -17,14 +17,24 @@ export class UsersService {
       data: {
         ...createUserDto,
         password: hash,
+        ativo: createUserDto.ativo ?? true,
       },
-      select: { id: true, name: true, email: true, role: true, created_at: true },
+      select: { id: true, name: true, email: true, role: true, ativo: true, created_at: true },
     });
   }
 
-  async findAll() {
+  async findAll(search?: string, ativo?: boolean) {
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (ativo !== undefined) where.ativo = ativo;
     return this.prisma.users.findMany({
-      select: { id: true, name: true, email: true, role: true, created_at: true },
+      where,
+      select: { id: true, name: true, email: true, role: true, ativo: true, created_at: true },
     });
   }
 
@@ -36,12 +46,16 @@ export class UsersService {
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
-    await this.findOne(id); // verifica existência
+    await this.findOne(id);
     const data: any = { ...updateUserDto };
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
-    return this.prisma.users.update({ where: { id }, data, select: { id: true, name: true, email: true, role: true, created_at: true } });
+    return this.prisma.users.update({
+      where: { id },
+      data,
+      select: { id: true, name: true, email: true, role: true, ativo: true, created_at: true },
+    });
   }
 
   async remove(id: number) {
